@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UniRx;
@@ -58,10 +57,10 @@ namespace UnityModule.AssetBundleManagement {
             where TURLResolverNormal : IURLResolver {
             if (!InstanceMap.ContainsKey(contextName) || InstanceMap[contextName] == default(Loader)) {
                 if (urlResolverSingleManifest == null) {
-                    throw new ArgumentException("Arguments 'urlResolverSingleManifest' cannot be null.");
+                    throw new System.ArgumentException("Arguments 'urlResolverSingleManifest' cannot be null.");
                 }
                 if (urlResolverNormal == null) {
-                    throw new ArgumentException("Arguments 'urlResolverNormal' cannot be null.");
+                    throw new System.ArgumentException("Arguments 'urlResolverNormal' cannot be null.");
                 }
                 InstanceMap[contextName] = new Loader() {
                     URLResolverSingleManifest = urlResolverSingleManifest,
@@ -138,7 +137,7 @@ namespace UnityModule.AssetBundleManagement {
                 this.LoadedSingleManifest = new ReactiveProperty<AssetBundleManifest>();
                 ObservableUnityWebRequest
                     .GetAssetBundle(this.URLResolverSingleManifest.Resolve(), 0)
-                    .Timeout(TimeSpan.FromSeconds(TIMEOUT_SECONDS))
+                    .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
                     .Retry(RETRY_COUNT)
                     .Subscribe(
                         (singleManifest) => {
@@ -175,7 +174,7 @@ namespace UnityModule.AssetBundleManagement {
                                     .SelectMany(__ => ObservableUnityWebRequest.GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), 0, null, this.GetProgress(assetBundleName)))
                                     // ダウンロードが済めば即用済みなので Unload する
                                     .Do(assetBundle => assetBundle.Unload(true))
-                                    .Timeout(TimeSpan.FromSeconds(TIMEOUT_SECONDS))
+                                    .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
                                     .Retry(RETRY_COUNT)
                                     // OnError にせよ OnCompleted にせよ「完了」したら並列ダウンロード数をデクリメント
                                     .Finally(() => this.ParallelDownloadCount.Value--)
