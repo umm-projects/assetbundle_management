@@ -6,6 +6,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityModule.ContextManagement;
 using Object = UnityEngine.Object;
+// ReSharper disable ConvertToAutoProperty
+// ReSharper disable ArrangeAccessorOwnerBody
+// ReSharper disable UnusedMember.Global
 
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -26,11 +29,11 @@ namespace UnityModule.AssetBundleManagement {
 
     public class Loader {
 
-        private const double TIMEOUT_SECONDS = 15.0;
+        private const double TIMEOUT_SECONDS = 30.0;
 
         private const int RETRY_COUNT = 3;
 
-        private const int MAXIMUM_PARALLEL_DOWNLOAD_COUNT = 10;
+        private const int MAXIMUM_PARALLEL_DOWNLOAD_COUNT = 1;
 
         private static Dictionary<string, Loader> instanceMap;
 
@@ -90,9 +93,9 @@ namespace UnityModule.AssetBundleManagement {
 
         private AssetBundleManifest SingleManifest { get; set; }
 
-        private ReactiveProperty<AssetBundleManifest> LoadedSingleManifest { get; set; }
+        private BehaviorSubject<AssetBundleManifest> LoadedSingleManifest { get; set; }
 
-        private ReactiveProperty<bool> HasDownloadedAll { get; set; }
+        private BehaviorSubject<bool> HasDownloadedAll { get; set; }
 
         private readonly Dictionary<string, IProgress<float>> progressMap = new Dictionary<string, IProgress<float>>();
 
@@ -133,8 +136,8 @@ namespace UnityModule.AssetBundleManagement {
         }
 
         public IObservable<AssetBundleManifest> LoadSingleManifestAsObservable() {
-            if (this.LoadedSingleManifest == default(ReactiveProperty<AssetBundleManifest>)) {
-                this.LoadedSingleManifest = new ReactiveProperty<AssetBundleManifest>();
+            if (this.LoadedSingleManifest == default(BehaviorSubject<AssetBundleManifest>)) {
+                this.LoadedSingleManifest = new BehaviorSubject<AssetBundleManifest>(default(AssetBundleManifest));
                 ObservableUnityWebRequest
                     .GetAssetBundle(this.URLResolverSingleManifest.Resolve(), 0)
                     .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
@@ -145,8 +148,11 @@ namespace UnityModule.AssetBundleManagement {
                             this.SingleManifest = singleManifest.LoadAsset<AssetBundleManifest>(singleManifest.GetAllAssetNames().First());
                             this.URLResolverNormal.SetSingleManifest(this.SingleManifest);
                             this.Count = this.URLResolverNormal.GetSingleManifest().GetAllAssetBundles().Length;
-                            this.LoadedSingleManifest.Value = this.SingleManifest;
+                            this.LoadedSingleManifest.OnNext(this.SingleManifest);
                             singleManifest.Unload(false);
+                        },
+                        e => {
+                            this.LoadedSingleManifest.OnError(e);
                         }
                     );
             }
@@ -154,8 +160,8 @@ namespace UnityModule.AssetBundleManagement {
         }
 
         public IObservable<Unit> DownloadAllAsObservable() {
-            if (this.HasDownloadedAll == default(ReactiveProperty<bool>)) {
-                this.HasDownloadedAll = new ReactiveProperty<bool>(false);
+            if (this.HasDownloadedAll == default(BehaviorSubject<bool>)) {
+                this.HasDownloadedAll = new BehaviorSubject<bool>(false);
                 this
                     // SingleManfiest を読み込む
                     .LoadSingleManifestAsObservable()
@@ -171,17 +177,20 @@ namespace UnityModule.AssetBundleManagement {
                                     // 並列カウントをインクリメント
                                     .Do(__ => this.ParallelDownloadCount.Value++)
                                     // UnityWebRequest に変換
-                                    .SelectMany(__ => ObservableUnityWebRequest.GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), 0, null, this.GetProgress(assetBundleName)))
-                                    // ダウンロードが済めば即用済みなので Unload する
-                                    .Do(assetBundle => assetBundle.Unload(true))
-                                    .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
-                                    .Retry(RETRY_COUNT)
+                                    .SelectMany(
+                                        __ => ObservableUnityWebRequest
+                                            .GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), 0, null, this.GetProgress(assetBundleName))
+                                            // ダウンロードが済めば即用済みなので Unload する
+                                            .Do(assetBundle => assetBundle.Unload(true))
+                                            .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
+                                            .Retry(RETRY_COUNT)
+                                    )
                                     // OnError にせよ OnCompleted にせよ「完了」したら並列ダウンロード数をデクリメント
                                     .Finally(() => this.ParallelDownloadCount.Value--)
                             )
                             .WhenAll()
                     )
-                    .Subscribe(_ => this.HasDownloadedAll.Value = true);
+                    .Subscribe(_ => this.HasDownloadedAll.OnNext(true), e => this.HasDownloadedAll.OnError(e));
             }
             return this.HasDownloadedAll.Where(x => x).AsUnitObservable();
         }
