@@ -23,7 +23,11 @@ namespace UnityModule.AssetBundleManagement {
         [SerializeField]
         private int assetBundleSingleManifestVersion;
 
-        public int AssetBundleSingleManifestVersion => this.assetBundleSingleManifestVersion;
+        public int AssetBundleSingleManifestVersion {
+            get {
+                return this.assetBundleSingleManifestVersion;
+            }
+        }
 
         public IURLResolver AssetBundleURLResolverSingleManfest { get; set; }
 

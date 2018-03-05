@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityModule.ContextManagement;
 
@@ -33,13 +33,49 @@ namespace UnityModule.AssetBundleManagement {
             { RuntimePlatform.WindowsEditor, "Standalone" },
         };
 
-        protected virtual Func<string> ProtocolResolver { get; set; } = () => "";
+        private Func<string> protocolResolver;
 
-        protected virtual Func<string> HostnameResolver { get; set; } = () => "";
+        protected virtual Func<string> ProtocolResolver {
+            get {
+                return this.protocolResolver ?? (this.protocolResolver = () => "");
+            }
+            set {
+                this.protocolResolver = value;
+            }
+        }
 
-        protected virtual Func<string, string> PathResolver { get; set; } = (assetBundleName) => "";
+        private Func<string> hostnameResolver;
 
-        protected virtual bool AppendPathPrefix { get; set; } = true;
+        protected virtual Func<string> HostnameResolver {
+            get {
+                return this.hostnameResolver ?? (this.hostnameResolver = () => "");
+            }
+            set {
+                this.hostnameResolver = value;
+            }
+        }
+
+        private Func<string, string> pathResolver;
+
+        protected virtual Func<string, string> PathResolver {
+            get {
+                return this.pathResolver ?? (this.pathResolver = (assetBundleName) => "");
+            }
+            set {
+                this.pathResolver = value;
+            }
+        }
+
+        private bool appendPathPrefix = true;
+
+        protected virtual bool AppendPathPrefix {
+            get {
+                return this.appendPathPrefix;
+            }
+            set {
+                this.appendPathPrefix = value;
+            }
+        }
 
         private AssetBundleManifest SingleManifest { get; set; }
 
@@ -103,15 +139,15 @@ namespace UnityModule.AssetBundleManagement {
 
         private const string SINGLE_MANIFEST_DIRECTORY_NAME = "SingleManifests";
 
-        private string Region { get; }
+        private string Region { get; set; }
 
-        private string BucketName { get; }
+        private string BucketName { get; set; }
 
         public AmazonS3URLResolver(string region, string bucketName) {
             this.Region = region;
             this.BucketName = bucketName;
             this.ProtocolResolver = () => "https";
-            this.HostnameResolver = () => $"s3-{this.Region}.amazonaws.com";
+            this.HostnameResolver = () => string.Format("s3-{0}.amazonaws.com", this.Region);
             this.PathResolver = this.DefaultPathResolver;
             this.AppendPathPrefix = true;
         }
@@ -149,7 +185,7 @@ namespace UnityModule.AssetBundleManagement {
 
         public AmazonCloudFrontURLResolver(string domainNamePrefix) {
             this.ProtocolResolver = () => "https";
-            this.HostnameResolver = () => $"{domainNamePrefix}.cloudfront.net";
+            this.HostnameResolver = () => string.Format("{0}.cloudfront.net", domainNamePrefix);
             this.PathResolver = this.DefaultPathResolver;
             this.AppendPathPrefix = true;
         }
@@ -173,6 +209,14 @@ namespace UnityModule.AssetBundleManagement {
                 hashString.Substring(0, HASH_SUBSTRING_DIGIT),
                 hashString
             );
+        }
+
+    }
+
+    internal static class Path {
+
+        public static string Combine(params string[] arguments) {
+            return arguments.Aggregate(string.Empty, System.IO.Path.Combine);
         }
 
     }

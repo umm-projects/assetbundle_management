@@ -41,7 +41,16 @@ namespace UnityModule.AssetBundleManagement {
             { typeof(ScriptableObject), ".asset" },
         };
 
-        private static string DefaultPathFormat { get; set; } = "assets/{0}{1}{2}{3}";
+        private static string defaultPathFormat = "assets/{0}{1}{2}{3}";
+
+        private static string DefaultPathFormat {
+            get {
+                return defaultPathFormat;
+            }
+            set {
+                defaultPathFormat = value;
+            }
+        }
 
         public string Resolve<T>(string name, bool includeAssetBundleExtension = true) where T : Object {
             return string.Format(
@@ -71,6 +80,7 @@ namespace UnityModule.AssetBundleManagement {
             EXTENSION_MAP[typeof(T)] = extension;
         }
 
+        // ReSharper disable once ParameterHidesMember
         public static void SetDefaultPathFormat(string defaultPathFormat) {
             DefaultPathFormat = defaultPathFormat;
         }
@@ -81,7 +91,13 @@ namespace UnityModule.AssetBundleManagement {
 
         private static INameResolver DefaultNameResolver { get; set; }
 
-        private static Dictionary<Type, INameResolver> TypeBasedNameResolverMap { get; } = new Dictionary<Type, INameResolver>();
+        private static Dictionary<Type, INameResolver> typeBasedNameResolverMap;
+
+        private static Dictionary<Type, INameResolver> TypeBasedNameResolverMap {
+            get {
+                return typeBasedNameResolverMap ?? (typeBasedNameResolverMap = new Dictionary<Type, INameResolver>());
+            }
+        }
 
         public static INameResolver GetNameResolver<T>() where T : Object {
             if (!TypeBasedNameResolverMap.ContainsKey(typeof(T))) {

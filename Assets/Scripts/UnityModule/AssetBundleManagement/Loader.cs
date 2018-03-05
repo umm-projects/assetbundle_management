@@ -33,7 +33,13 @@ namespace UnityModule.AssetBundleManagement {
 
         private const int MAXIMUM_PARALLEL_DOWNLOAD_COUNT = 10;
 
-        private static Dictionary<string, Loader> InstanceMap { get; } = new Dictionary<string, Loader>();
+        private static Dictionary<string, Loader> instanceMap;
+
+        private static Dictionary<string, Loader> InstanceMap {
+            get {
+                return instanceMap ?? (instanceMap = new Dictionary<string, Loader>());
+            }
+        }
 
         public static Loader GetInstance<TProjectContext>(TProjectContext projectContext)
             where TProjectContext : IDownloadableProjectContext, IProjectContext {
@@ -52,10 +58,10 @@ namespace UnityModule.AssetBundleManagement {
             where TURLResolverNormal : IURLResolver {
             if (!InstanceMap.ContainsKey(contextName) || InstanceMap[contextName] == default(Loader)) {
                 if (urlResolverSingleManifest == null) {
-                    throw new ArgumentException("Arguments cannot be null.", nameof(urlResolverSingleManifest));
+                    throw new ArgumentException("Arguments 'urlResolverSingleManifest' cannot be null.");
                 }
                 if (urlResolverNormal == null) {
-                    throw new ArgumentException("Arguments cannot be null.", nameof(urlResolverNormal));
+                    throw new ArgumentException("Arguments 'urlResolverNormal' cannot be null.");
                 }
                 InstanceMap[contextName] = new Loader() {
                     URLResolverSingleManifest = urlResolverSingleManifest,
@@ -89,13 +95,37 @@ namespace UnityModule.AssetBundleManagement {
 
         private ReactiveProperty<bool> HasDownloadedAll { get; set; }
 
-        private Dictionary<string, UniRx.IProgress<float>> ProgressMap { get; } = new Dictionary<string, UniRx.IProgress<float>>();
+        private readonly Dictionary<string, IProgress<float>> progressMap = new Dictionary<string, IProgress<float>>();
 
-        private ReactiveProperty<float> ProgressSummary { get; } = new ReactiveProperty<float>(0.0f);
+        private Dictionary<string, IProgress<float>> ProgressMap {
+            get {
+                return this.progressMap;
+            }
+        }
 
-        private ReactiveProperty<int> ParallelDownloadCount { get; } = new ReactiveProperty<int>(0);
+        private readonly ReactiveProperty<float> progressSummary = new ReactiveProperty<float>(0.0f);
 
-        private Dictionary<string, AssetBundle> LoadedAssetBundleMap { get; } = new Dictionary<string, AssetBundle>();
+        private ReactiveProperty<float> ProgressSummary {
+            get {
+                return this.progressSummary;
+            }
+        }
+
+        private readonly ReactiveProperty<int> parallelDownloadCount = new ReactiveProperty<int>(0);
+
+        private ReactiveProperty<int> ParallelDownloadCount {
+            get {
+                return this.parallelDownloadCount;
+            }
+        }
+
+        private readonly Dictionary<string, AssetBundle> loadedAssetBundleMap = new Dictionary<string, AssetBundle>();
+
+        private Dictionary<string, AssetBundle> LoadedAssetBundleMap {
+            get {
+                return this.loadedAssetBundleMap;
+            }
+        }
 
         private int Count { get; set; }
 
@@ -103,7 +133,7 @@ namespace UnityModule.AssetBundleManagement {
             return this.SingleManifest;
         }
 
-        public UniRx.IObservable<AssetBundleManifest> LoadSingleManifestAsObservable() {
+        public IObservable<AssetBundleManifest> LoadSingleManifestAsObservable() {
             if (this.LoadedSingleManifest == default(ReactiveProperty<AssetBundleManifest>)) {
                 this.LoadedSingleManifest = new ReactiveProperty<AssetBundleManifest>();
                 ObservableUnityWebRequest
@@ -124,7 +154,7 @@ namespace UnityModule.AssetBundleManagement {
             return this.LoadedSingleManifest.Where(x => x != default(AssetBundleManifest));
         }
 
-        public UniRx.IObservable<Unit> DownloadAllAsObservable() {
+        public IObservable<Unit> DownloadAllAsObservable() {
             if (this.HasDownloadedAll == default(ReactiveProperty<bool>)) {
                 this.HasDownloadedAll = new ReactiveProperty<bool>(false);
                 this
@@ -157,17 +187,17 @@ namespace UnityModule.AssetBundleManagement {
             return this.HasDownloadedAll.Where(x => x).AsUnitObservable();
         }
 
-        public UniRx.IObservable<T> LoadAssetAsObservable<T>(string name) where T : Object {
+        public IObservable<T> LoadAssetAsObservable<T>(string name) where T : Object {
             return this.DownloadAllAsObservable()
                 .SelectMany(_ => this.LoadWithDependenciesAsObservable(NameResolverManager.GetNameResolver<T>().Resolve<T>(name)))
                 .Select(assetBundle => LoadAssetFromAssetBundle<T>(assetBundle, NameResolverManager.GetNameResolver<T>().Resolve<T>(name, false)));
         }
 
-        public UniRx.IObservable<float> OnChangeProgressAsObservable() {
+        public IObservable<float> OnChangeProgressAsObservable() {
             return this.ProgressSummary.Select(x => x / this.Count).AsObservable();
         }
 
-        private UniRx.IObservable<AssetBundle> LoadWithDependenciesAsObservable(string assetBundleName) {
+        private IObservable<AssetBundle> LoadWithDependenciesAsObservable(string assetBundleName) {
             if (!this.SingleManifest.GetDirectDependencies(assetBundleName).Any()) {
                 return this.LoadAsObservable(assetBundleName);
             }
@@ -180,7 +210,7 @@ namespace UnityModule.AssetBundleManagement {
                 .SelectMany(_ => this.LoadAsObservable(assetBundleName));
         }
 
-        private UniRx.IObservable<AssetBundle> LoadAsObservable(string assetBundleName) {
+        private IObservable<AssetBundle> LoadAsObservable(string assetBundleName) {
             if (this.LoadedAssetBundleMap.ContainsKey(assetBundleName)) {
                 return Observable.Return(this.LoadedAssetBundleMap[assetBundleName]);
             }
@@ -205,9 +235,9 @@ namespace UnityModule.AssetBundleManagement {
             return assetBundle.LoadAsset<T>(name);
         }
 
-        private UniRx.IProgress<float> GetProgress(string assetBundleName) {
+        private IProgress<float> GetProgress(string assetBundleName) {
             if (!this.ProgressMap.ContainsKey(assetBundleName)) {
-                this.ProgressMap[assetBundleName] = new UniRx.Progress<float>(progress => this.ProgressSummary.Value += progress);
+                this.ProgressMap[assetBundleName] = new Progress<float>(progress => this.ProgressSummary.Value += progress);
             }
             return this.ProgressMap[assetBundleName];
         }
