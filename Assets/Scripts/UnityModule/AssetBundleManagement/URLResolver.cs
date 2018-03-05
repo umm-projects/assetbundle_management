@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityModule.ContextManagement;
+// ReSharper disable ConvertToAutoProperty
+// ReSharper disable UseStringInterpolation
+// ReSharper disable AutoPropertyCanBeMadeGetOnly.Local
 
 // ReSharper disable VirtualMemberNeverOverridden.Global
 // ReSharper disable UnusedMember.Global
@@ -32,6 +35,13 @@ namespace UnityModule.AssetBundleManagement {
             { RuntimePlatform.OSXEditor    , "Standalone" },
             { RuntimePlatform.WindowsEditor, "Standalone" },
         };
+
+#if UNITY_EDITOR
+        private static readonly Dictionary<UnityEditor.BuildTarget, string> PLATFORM_NAME_MAP_FOR_EDITOR = new Dictionary<UnityEditor.BuildTarget, string>() {
+            { UnityEditor.BuildTarget.iOS    , "iOS" },
+            { UnityEditor.BuildTarget.Android, "Android" },
+        };
+#endif
 
         private Func<string> protocolResolver;
 
@@ -112,6 +122,12 @@ namespace UnityModule.AssetBundleManagement {
         }
 
         protected static string GetPlatformPathName() {
+#if UNITY_EDITOR
+            // PostprocessBuildAssetBundle などで iOS/Android 向けの URL を作成するなどの処理が必要になるため、現在向いている Platform を正として処理する
+            if (PLATFORM_NAME_MAP_FOR_EDITOR.ContainsKey(UnityEditor.EditorUserBuildSettings.activeBuildTarget)) {
+                return PLATFORM_NAME_MAP_FOR_EDITOR[UnityEditor.EditorUserBuildSettings.activeBuildTarget];
+            }
+#endif
             return PLATFORM_NAME_MAP[Application.platform];
         }
 
