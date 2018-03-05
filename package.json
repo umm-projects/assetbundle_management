@@ -26,7 +26,7 @@
     "scripts"
   ],
   "dependencies": {
-    "@umm/context_management": "^1.0.0",
+    "@umm/context_management": "^1.0.1",
     "@umm/unirx": "^1.0.3",
     "@umm/unirx_observableunitywebrequest": "^1.1.2",
     "glob": "^7.1.2",
