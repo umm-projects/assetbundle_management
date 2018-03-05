@@ -27,7 +27,6 @@
   ],
   "dependencies": {
     "@umm/context_management": "^1.0.0",
-    "@umm/simple_build": "^1.4.5",
     "@umm/unirx": "^1.0.3",
     "@umm/unirx_observableunitywebrequest": "^1.1.2",
     "glob": "^7.1.2",
