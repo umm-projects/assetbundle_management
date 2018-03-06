@@ -10,9 +10,9 @@ namespace UnityModule.AssetBundleManagement {
 
         int AssetBundleSingleManifestVersion { get; }
 
-        IURLResolver AssetBundleURLResolverSingleManfest { get; set; }
+        IURLResolver AssetBundleURLResolverSingleManifest { get; set; }
 
-        IURLResolver AssetBundleURLResolverNormal { get; set; }
+        IURLResolver AssetBundleURLResolver { get; set; }
 
     }
 
@@ -29,9 +29,9 @@ namespace UnityModule.AssetBundleManagement {
             }
         }
 
-        public IURLResolver AssetBundleURLResolverSingleManfest { get; set; }
+        public IURLResolver AssetBundleURLResolverSingleManifest { get; set; }
 
-        public IURLResolver AssetBundleURLResolverNormal { get; set; }
+        public IURLResolver AssetBundleURLResolver { get; set; }
 
     }
 

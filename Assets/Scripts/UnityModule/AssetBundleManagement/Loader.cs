@@ -45,7 +45,7 @@ namespace UnityModule.AssetBundleManagement {
 
         public static Loader GetInstance<TProjectContext>(TProjectContext projectContext)
             where TProjectContext : IDownloadableProjectContext, IProjectContext {
-            return GetInstance(projectContext.Name, projectContext.AssetBundleURLResolverSingleManfest, projectContext.AssetBundleURLResolverNormal);
+            return GetInstance(projectContext.Name, projectContext.AssetBundleURLResolverSingleManifest, projectContext.AssetBundleURLResolver);
         }
 
         public static Loader GetInstance<TEnum, TURLResolverSingleManifest, TURLResolverNormal>(TEnum contextEnum, TURLResolverSingleManifest urlResolverSingleManifest, TURLResolverNormal urlResolverNormal)
