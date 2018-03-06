@@ -180,8 +180,10 @@ namespace UnityModule.AssetBundleManagement {
                                     .SelectMany(
                                         __ => ObservableUnityWebRequest
                                             .GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), 0, null, this.GetProgress(assetBundleName))
-                                            // ダウンロードが済めば即用済みなので Unload する
-                                            .Do(assetBundle => assetBundle.Unload(true))
+                                            // 読み込み完了時に読み込み済マップに入れておく
+                                            //   AssetBundle を開きっぱなしにしておくコストは殆ど無いとのことなので、Unload は原則行わない
+                                            //   See also: http://tsubakit1.hateblo.jp/entry/2016/08/23/233604 の「SceneをAssetBundleに含める方法」セクションの最後
+                                            .Do(assetBundle => this.LoadedAssetBundleMap[assetBundleName] = assetBundle)
                                             .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
                                             .Retry(RETRY_COUNT)
                                     )
@@ -224,10 +226,9 @@ namespace UnityModule.AssetBundleManagement {
             }
             return ObservableUnityWebRequest
                 .GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), 0)
-                // 読み込み完了時に読み込み済マップに入れておく
-                //   AssetBundle を開きっぱなしにしておくコストは殆ど無いとのことなので、Unload は原則行わない
-                //   See also: http://tsubakit1.hateblo.jp/entry/2016/08/23/233604 の「SceneをAssetBundleに含める方法」セクションの最後
-                .Do(assetBundle => this.LoadedAssetBundleMap[assetBundleName] = assetBundle);
+                .Do(assetBundle => this.LoadedAssetBundleMap[assetBundleName] = assetBundle)
+                .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
+                .Retry(RETRY_COUNT);
         }
 
         private static T LoadAssetFromAssetBundle<T>(AssetBundle assetBundle, string name) where T : Object {
