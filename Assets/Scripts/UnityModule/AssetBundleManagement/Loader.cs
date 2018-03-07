@@ -105,6 +105,14 @@ namespace UnityModule.AssetBundleManagement {
             }
         }
 
+        private readonly Dictionary<string, float> progressedValueMap = new Dictionary<string, float>();
+
+        private Dictionary<string, float> ProgressedValueMap {
+            get {
+                return this.progressedValueMap;
+            }
+        }
+
         private readonly ReactiveProperty<float> progressSummary = new ReactiveProperty<float>(0.0f);
 
         private ReactiveProperty<float> ProgressSummary {
@@ -246,7 +254,10 @@ namespace UnityModule.AssetBundleManagement {
 
         private IProgress<float> GetProgress(string assetBundleName) {
             if (!this.ProgressMap.ContainsKey(assetBundleName)) {
-                this.ProgressMap[assetBundleName] = new Progress<float>(progress => this.ProgressSummary.Value += progress);
+                this.ProgressMap[assetBundleName] = new Progress<float>(progress => {
+                    this.ProgressedValueMap[assetBundleName] = progress;
+                    this.ProgressSummary.Value = this.ProgressedValueMap.Values.Sum();
+                });
             }
             return this.ProgressMap[assetBundleName];
         }
