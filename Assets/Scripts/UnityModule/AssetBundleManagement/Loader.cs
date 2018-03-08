@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UniRx;
 using UnityEngine;
@@ -34,6 +35,8 @@ namespace UnityModule.AssetBundleManagement {
         private const int RETRY_COUNT = 3;
 
         private const int MAXIMUM_PARALLEL_DOWNLOAD_COUNT = 1;
+
+        private const string LOCAL_SINGLE_MANIFEST_DIRECTORY = "AssetBundles/SingleManifests";
 
         private static Dictionary<string, Loader> instanceMap;
 
@@ -105,6 +108,14 @@ namespace UnityModule.AssetBundleManagement {
             }
         }
 
+        private readonly Dictionary<string, float> progressedValueMap = new Dictionary<string, float>();
+
+        private Dictionary<string, float> ProgressedValueMap {
+            get {
+                return this.progressedValueMap;
+            }
+        }
+
         private readonly ReactiveProperty<float> progressSummary = new ReactiveProperty<float>(0.0f);
 
         private ReactiveProperty<float> ProgressSummary {
@@ -138,10 +149,7 @@ namespace UnityModule.AssetBundleManagement {
         public IObservable<AssetBundleManifest> LoadSingleManifestAsObservable() {
             if (this.LoadedSingleManifest == default(BehaviorSubject<AssetBundleManifest>)) {
                 this.LoadedSingleManifest = new BehaviorSubject<AssetBundleManifest>(default(AssetBundleManifest));
-                ObservableUnityWebRequest
-                    .GetAssetBundle(this.URLResolverSingleManifest.Resolve(), 0)
-                    .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
-                    .Retry(RETRY_COUNT)
+                LoadSingleManifest(this.URLResolverSingleManifest)
                     .Subscribe(
                         (singleManifest) => {
                             // .First() が強引だが、こうする以外に手が思いつかず…。
@@ -244,9 +252,45 @@ namespace UnityModule.AssetBundleManagement {
             return assetBundle.LoadAsset<T>(name);
         }
 
+        private static string CreateLocalSingleManifestPath() {
+            return Path.Combine(
+                Application.persistentDataPath,
+                LOCAL_SINGLE_MANIFEST_DIRECTORY,
+                ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
+            );
+        }
+
+        private static bool HasSingleManifest() {
+            return File.Exists(CreateLocalSingleManifestPath());
+        }
+
+        private static void SaveSingleManifest(byte[] data) {
+            if (!Directory.Exists(System.IO.Path.GetDirectoryName(CreateLocalSingleManifestPath()))) {
+                // ReSharper disable once AssignNullToNotNullAttribute
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CreateLocalSingleManifestPath()));
+            }
+            File.WriteAllBytes(CreateLocalSingleManifestPath(), data);
+        }
+
+        private static IObservable<AssetBundle> LoadSingleManifest(IURLResolver urlResolverSingleManifest) {
+            System.Func<IObservable<AssetBundle>> createStream = () => AssetBundle.LoadFromFileAsync(CreateLocalSingleManifestPath()).AsAsyncOperationObservable().Select(assetBundleCreateRequest => assetBundleCreateRequest.assetBundle);
+            if (!HasSingleManifest()) {
+                return ObservableUnityWebRequest
+                    .GetData(urlResolverSingleManifest.Resolve())
+                    .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
+                    .Retry(RETRY_COUNT)
+                    .Do(SaveSingleManifest)
+                    .SelectMany(_ => createStream());
+            }
+            return createStream();
+        }
+
         private IProgress<float> GetProgress(string assetBundleName) {
             if (!this.ProgressMap.ContainsKey(assetBundleName)) {
-                this.ProgressMap[assetBundleName] = new Progress<float>(progress => this.ProgressSummary.Value += progress);
+                this.ProgressMap[assetBundleName] = new Progress<float>(progress => {
+                    this.ProgressedValueMap[assetBundleName] = progress;
+                    this.ProgressSummary.Value = this.ProgressedValueMap.Values.Sum();
+                });
             }
             return this.ProgressMap[assetBundleName];
         }
