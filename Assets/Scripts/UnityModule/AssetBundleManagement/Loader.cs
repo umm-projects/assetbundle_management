@@ -179,7 +179,7 @@ namespace UnityModule.AssetBundleManagement {
                                     // UnityWebRequest に変換
                                     .SelectMany(
                                         __ => ObservableUnityWebRequest
-                                            .GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), 0, null, this.GetProgress(assetBundleName))
+                                            .GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), this.SingleManifest.GetAssetBundleHash(assetBundleName), 0, null, this.GetProgress(assetBundleName))
                                             // 読み込み完了時に読み込み済マップに入れておく
                                             //   AssetBundle を開きっぱなしにしておくコストは殆ど無いとのことなので、Unload は原則行わない
                                             //   See also: http://tsubakit1.hateblo.jp/entry/2016/08/23/233604 の「SceneをAssetBundleに含める方法」セクションの最後
