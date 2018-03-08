@@ -270,6 +270,9 @@ namespace UnityModule.AssetBundleManagement {
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CreateLocalSingleManifestPath()));
             }
             File.WriteAllBytes(CreateLocalSingleManifestPath(), data);
+#if UNITY_IOS
+            UnityEngine.iOS.Device.SetNoBackupFlag(CreateLocalSingleManifestPath());
+#endif
         }
 
         private static IObservable<AssetBundle> LoadSingleManifest(IURLResolver urlResolverSingleManifest) {
