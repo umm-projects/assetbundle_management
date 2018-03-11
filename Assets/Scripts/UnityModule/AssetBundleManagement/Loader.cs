@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +8,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityModule.ContextManagement;
 using Object = UnityEngine.Object;
+
 // ReSharper disable ConvertToAutoProperty
 // ReSharper disable ArrangeAccessorOwnerBody
 // ReSharper disable UnusedMember.Global
@@ -28,7 +30,7 @@ namespace UnityModule.AssetBundleManagement {
 
     }
 
-    public class Loader {
+    public class Loader : IDisposable {
 
         private const double TIMEOUT_SECONDS = 30.0;
 
@@ -36,7 +38,9 @@ namespace UnityModule.AssetBundleManagement {
 
         private const int MAXIMUM_PARALLEL_DOWNLOAD_COUNT = 1;
 
-        private const string LOCAL_SINGLE_MANIFEST_DIRECTORY = "AssetBundles/SingleManifests";
+        private const string LOCAL_ASSETBUNDLE_DIRECTORY = "AssetBundles";
+
+        private const string LOCAL_SINGLE_MANIFEST_DIRECTORY = "SingleManifests";
 
         private static Dictionary<string, Loader> instanceMap;
 
@@ -63,10 +67,10 @@ namespace UnityModule.AssetBundleManagement {
             where TURLResolverNormal : IURLResolver {
             if (!InstanceMap.ContainsKey(contextName) || InstanceMap[contextName] == default(Loader)) {
                 if (urlResolverSingleManifest == null) {
-                    throw new System.ArgumentException("Arguments 'urlResolverSingleManifest' cannot be null.");
+                    throw new ArgumentException("Arguments 'urlResolverSingleManifest' cannot be null.");
                 }
                 if (urlResolverNormal == null) {
-                    throw new System.ArgumentException("Arguments 'urlResolverNormal' cannot be null.");
+                    throw new ArgumentException("Arguments 'urlResolverNormal' cannot be null.");
                 }
                 InstanceMap[contextName] = new Loader() {
                     URLResolverSingleManifest = urlResolverSingleManifest,
@@ -82,8 +86,13 @@ namespace UnityModule.AssetBundleManagement {
 
         public static void DestroyInstance(string contextName) {
             if (InstanceMap.ContainsKey(contextName)) {
-                InstanceMap[contextName] = default(Loader);
+                InstanceMap[contextName].Dispose();
+                InstanceMap.Remove(contextName);
             }
+        }
+
+        public static void DestroyAllInstance() {
+            InstanceMap.ToList().ForEach(pair => DestroyInstance(pair.Key));
         }
 
         // GetInstance() メソッド経由での呼び出しを強制する
@@ -96,13 +105,9 @@ namespace UnityModule.AssetBundleManagement {
 
         private AssetBundleManifest SingleManifest { get; set; }
 
-        private BehaviorSubject<AssetBundleManifest> LoadedSingleManifest { get; set; }
+        private readonly Dictionary<string, UniRx.IProgress<float>> progressMap = new Dictionary<string, UniRx.IProgress<float>>();
 
-        private BehaviorSubject<bool> HasDownloadedAll { get; set; }
-
-        private readonly Dictionary<string, IProgress<float>> progressMap = new Dictionary<string, IProgress<float>>();
-
-        private Dictionary<string, IProgress<float>> ProgressMap {
+        private Dictionary<string, UniRx.IProgress<float>> ProgressMap {
             get {
                 return this.progressMap;
             }
@@ -146,76 +151,78 @@ namespace UnityModule.AssetBundleManagement {
             return this.SingleManifest;
         }
 
-        public IObservable<AssetBundleManifest> LoadSingleManifestAsObservable() {
-            if (this.LoadedSingleManifest == default(BehaviorSubject<AssetBundleManifest>)) {
-                this.LoadedSingleManifest = new BehaviorSubject<AssetBundleManifest>(default(AssetBundleManifest));
-                LoadSingleManifest(this.URLResolverSingleManifest)
-                    .Subscribe(
-                        (singleManifest) => {
-                            // .First() が強引だが、こうする以外に手が思いつかず…。
-                            this.SingleManifest = singleManifest.LoadAsset<AssetBundleManifest>(singleManifest.GetAllAssetNames().First());
-                            this.URLResolverNormal.SetSingleManifest(this.SingleManifest);
-                            this.Count = this.URLResolverNormal.GetSingleManifest().GetAllAssetBundles().Length;
-                            this.LoadedSingleManifest.OnNext(this.SingleManifest);
-                            singleManifest.Unload(false);
-                        },
-                        e => {
-                            this.LoadedSingleManifest.OnError(e);
-                        }
-                    );
-            }
-            return this.LoadedSingleManifest.Where(x => x != default(AssetBundleManifest));
+        public UniRx.IObservable<AssetBundleManifest> LoadSingleManifestAsObservable() {
+            return LoadSingleManifest(this.URLResolverSingleManifest)
+                .Select(
+                    (singleManifest) => {
+                        // .First() が強引だが、こうする以外に手が思いつかず…。
+                        this.SingleManifest = singleManifest.LoadAsset<AssetBundleManifest>(singleManifest.GetAllAssetNames().First());
+                        this.URLResolverNormal.SetSingleManifest(this.SingleManifest);
+                        this.Count = this.URLResolverNormal.GetSingleManifest().GetAllAssetBundles().Length;
+                        singleManifest.Unload(false);
+                        return this.SingleManifest;
+                    }
+                );
         }
 
-        public IObservable<Unit> DownloadAllAsObservable() {
-            if (this.HasDownloadedAll == default(BehaviorSubject<bool>)) {
-                this.HasDownloadedAll = new BehaviorSubject<bool>(false);
-                this
-                    // SingleManfiest を読み込む
-                    .LoadSingleManifestAsObservable()
-                    .SelectMany(
-                        _ => this
-                            .SingleManifest
-                            // 全ての AssetBundle 名を取得
-                            .GetAllAssetBundles()
-                            .Select(
-                                assetBundleName => Observable
-                                    // 並列処理待ち
-                                    .FromCoroutine(this.WaitParallelDownload)
-                                    // 並列カウントをインクリメント
-                                    .Do(__ => this.ParallelDownloadCount.Value++)
-                                    // UnityWebRequest に変換
-                                    .SelectMany(
-                                        __ => ObservableUnityWebRequest
+        public UniRx.IObservable<Unit> DownloadAllAsObservable() {
+            return this
+                // SingleManfiest を読み込む
+                .LoadSingleManifestAsObservable()
+                .SelectMany(
+                    _ => this
+                        .SingleManifest
+                        // 全ての AssetBundle 名を取得
+                        .GetAllAssetBundles()
+                        .Select(
+                            assetBundleName => Observable
+                                // 並列処理待ち
+                                .FromCoroutine(this.WaitParallelDownload)
+                                // 並列カウントをインクリメント
+                                .Do(__ => this.ParallelDownloadCount.Value++)
+                                // UnityWebRequest に変換
+                                .SelectMany(
+                                    __ => {
+                                        if (this.LoadedAssetBundleMap.ContainsKey(assetBundleName)) {
+                                            return Observable.Return(this.LoadedAssetBundleMap[assetBundleName]);
+                                        }
+                                        return ObservableUnityWebRequest
                                             .GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), this.SingleManifest.GetAssetBundleHash(assetBundleName), 0, null, this.GetProgress(assetBundleName))
                                             // 読み込み完了時に読み込み済マップに入れておく
                                             //   AssetBundle を開きっぱなしにしておくコストは殆ど無いとのことなので、Unload は原則行わない
                                             //   See also: http://tsubakit1.hateblo.jp/entry/2016/08/23/233604 の「SceneをAssetBundleに含める方法」セクションの最後
                                             .Do(assetBundle => this.LoadedAssetBundleMap[assetBundleName] = assetBundle)
-                                            .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
-                                            .Retry(RETRY_COUNT)
-                                    )
-                                    // OnError にせよ OnCompleted にせよ「完了」したら並列ダウンロード数をデクリメント
-                                    .Finally(() => this.ParallelDownloadCount.Value--)
-                            )
-                            .WhenAll()
-                    )
-                    .Subscribe(_ => this.HasDownloadedAll.OnNext(true), e => this.HasDownloadedAll.OnError(e));
-            }
-            return this.HasDownloadedAll.Where(x => x).AsUnitObservable();
+                                            .Timeout(TimeSpan.FromSeconds(TIMEOUT_SECONDS));
+                                    })
+                                // OnError にせよ OnCompleted にせよ「完了」したら並列ダウンロード数をデクリメント
+                                .Finally(() => this.ParallelDownloadCount.Value--)
+                        )
+                        .WhenAll()
+                )
+                .AsUnitObservable();
         }
 
-        public IObservable<T> LoadAssetAsObservable<T>(string name) where T : Object {
+        public UniRx.IObservable<T> LoadAssetAsObservable<T>(string name) where T : Object {
             return this.DownloadAllAsObservable()
                 .SelectMany(_ => this.LoadWithDependenciesAsObservable(NameResolverManager.GetNameResolver<T>().Resolve<T>(name)))
                 .Select(assetBundle => LoadAssetFromAssetBundle<T>(assetBundle, NameResolverManager.GetNameResolver<T>().Resolve<T>(name, false)));
         }
 
-        public IObservable<float> OnChangeProgressAsObservable() {
+        public UniRx.IObservable<float> OnChangeProgressAsObservable() {
             return this.ProgressSummary.Select(x => x / this.Count).AsObservable();
         }
 
-        private IObservable<AssetBundle> LoadWithDependenciesAsObservable(string assetBundleName) {
+        public void Dispose() {
+            this.LoadedAssetBundleMap
+                .ToList()
+                .ForEach(
+                    pair => {
+                        pair.Value.Unload(true);
+                    }
+                );
+        }
+
+        private UniRx.IObservable<AssetBundle> LoadWithDependenciesAsObservable(string assetBundleName) {
             if (!this.SingleManifest.GetDirectDependencies(assetBundleName).Any()) {
                 return this.LoadAsObservable(assetBundleName);
             }
@@ -228,15 +235,14 @@ namespace UnityModule.AssetBundleManagement {
                 .SelectMany(_ => this.LoadAsObservable(assetBundleName));
         }
 
-        private IObservable<AssetBundle> LoadAsObservable(string assetBundleName) {
+        private UniRx.IObservable<AssetBundle> LoadAsObservable(string assetBundleName) {
             if (this.LoadedAssetBundleMap.ContainsKey(assetBundleName)) {
                 return Observable.Return(this.LoadedAssetBundleMap[assetBundleName]);
             }
             return ObservableUnityWebRequest
                 .GetAssetBundle(this.URLResolverNormal.Resolve(assetBundleName), 0)
                 .Do(assetBundle => this.LoadedAssetBundleMap[assetBundleName] = assetBundle)
-                .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
-                .Retry(RETRY_COUNT);
+                .Timeout(TimeSpan.FromSeconds(TIMEOUT_SECONDS));
         }
 
         private static T LoadAssetFromAssetBundle<T>(AssetBundle assetBundle, string name) where T : Object {
@@ -255,6 +261,8 @@ namespace UnityModule.AssetBundleManagement {
         private static string CreateLocalSingleManifestPath() {
             return Path.Combine(
                 Application.persistentDataPath,
+                LOCAL_ASSETBUNDLE_DIRECTORY,
+                ContextManager.CurrentProject.Name,
                 LOCAL_SINGLE_MANIFEST_DIRECTORY,
                 ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
             );
@@ -275,12 +283,12 @@ namespace UnityModule.AssetBundleManagement {
 #endif
         }
 
-        private static IObservable<AssetBundle> LoadSingleManifest(IURLResolver urlResolverSingleManifest) {
-            System.Func<IObservable<AssetBundle>> createStream = () => AssetBundle.LoadFromFileAsync(CreateLocalSingleManifestPath()).AsAsyncOperationObservable().Select(assetBundleCreateRequest => assetBundleCreateRequest.assetBundle);
+        private static UniRx.IObservable<AssetBundle> LoadSingleManifest(IURLResolver urlResolverSingleManifest) {
+            Func<UniRx.IObservable<AssetBundle>> createStream = () => AssetBundle.LoadFromFileAsync(CreateLocalSingleManifestPath()).AsAsyncOperationObservable().Select(assetBundleCreateRequest => assetBundleCreateRequest.assetBundle);
             if (!HasSingleManifest()) {
                 return ObservableUnityWebRequest
                     .GetData(urlResolverSingleManifest.Resolve())
-                    .Timeout(System.TimeSpan.FromSeconds(TIMEOUT_SECONDS))
+                    .Timeout(TimeSpan.FromSeconds(TIMEOUT_SECONDS))
                     .Retry(RETRY_COUNT)
                     .Do(SaveSingleManifest)
                     .SelectMany(_ => createStream());
@@ -288,9 +296,9 @@ namespace UnityModule.AssetBundleManagement {
             return createStream();
         }
 
-        private IProgress<float> GetProgress(string assetBundleName) {
+        private UniRx.IProgress<float> GetProgress(string assetBundleName) {
             if (!this.ProgressMap.ContainsKey(assetBundleName)) {
-                this.ProgressMap[assetBundleName] = new Progress<float>(progress => {
+                this.ProgressMap[assetBundleName] = new UniRx.Progress<float>(progress => {
                     this.ProgressedValueMap[assetBundleName] = progress;
                     this.ProgressSummary.Value = this.ProgressedValueMap.Values.Sum();
                 });
