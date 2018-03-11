@@ -10,6 +10,8 @@ namespace UnityModule.AssetBundleManagement {
 
         int AssetBundleSingleManifestVersion { get; }
 
+        string InitialSceneName { get; set; }
+
         IURLResolver AssetBundleURLResolverSingleManifest { get; set; }
 
         IURLResolver AssetBundleURLResolver { get; set; }
@@ -28,6 +30,8 @@ namespace UnityModule.AssetBundleManagement {
                 return this.assetBundleSingleManifestVersion;
             }
         }
+
+        public string InitialSceneName { get; set; }
 
         public IURLResolver AssetBundleURLResolverSingleManifest { get; set; }
 
