@@ -212,6 +212,12 @@ namespace UnityModule.AssetBundleManagement {
             return this.ProgressSummary.Select(x => x / this.Count).AsObservable();
         }
 
+        public static void ClearCachedSingleManifest() {
+            if (HasSingleManifest()) {
+                File.Delete(CreateLocalSingleManifestPath());
+            }
+        }
+
         public void Dispose() {
             this.LoadedAssetBundleMap
                 .ToList()
