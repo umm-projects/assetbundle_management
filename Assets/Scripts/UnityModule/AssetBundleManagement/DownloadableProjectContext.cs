@@ -12,11 +12,11 @@ namespace UnityModule.AssetBundleManagement
     {
         int AssetBundleSingleManifestVersion { get; }
 
-        string InitialSceneName { get; }
+        string InitialSceneName { get; set; }
 
-        IURLResolver AssetBundleURLResolverSingleManifest { get; }
+        IURLResolver AssetBundleURLResolverSingleManifest { get; set; }
 
-        IURLResolver AssetBundleURLResolver { get; }
+        IURLResolver AssetBundleURLResolver { get; set; }
     }
 
     // XXX: VersionResolver 的なクラスを用意して、固定の値と RemoteConfig とで切り替えられるようにする
@@ -36,6 +36,7 @@ namespace UnityModule.AssetBundleManagement
         public string InitialSceneName
         {
             get { return initialSceneName; }
+            set { initialSceneName = value; }
         }
 
         public IURLResolver AssetBundleURLResolverSingleManifest { get; set; }
