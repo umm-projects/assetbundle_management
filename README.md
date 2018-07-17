@@ -11,7 +11,7 @@
 ## Install
 
 ```shell
-$ npm install github:umm-projects/assetbundle_management
+$ npm install github:umm/assetbundle_management
 ```
 
 ## Usage
