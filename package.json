@@ -2,9 +2,9 @@
   "name": "@umm/assetbundle_management",
   "version": "1.4.1",
   "description": "Manage AssetBundle handling",
-  "homepage": "https://github.com/umm-projects/assetbundle_management",
+  "homepage": "https://github.com/umm/assetbundle_management",
   "bugs": {
-    "url": "https://github.com/umm-projects/assetbundle_management/issues"
+    "url": "https://github.com/umm/assetbundle_management/issues"
   },
   "scripts": {
     "umm:init": "umm-init",
@@ -18,17 +18,17 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:umm-projects/assetbundle_management"
+    "url": "git@github.com:umm/assetbundle_management"
   },
   "files": [
     "Assets",
     "scripts"
   ],
   "dependencies": {
-    "@umm/context_management": "umm-projects/context_management#^1.0.0",
-    "@umm/scripts": "umm-projects/scripts#^1.0.0",
-    "@umm/unirx": "umm-projects/unirx#^2.0.0",
-    "@umm/unirx_observableunitywebrequest": "umm-projects/unirx_observableunitywebrequest#^1.0.0"
+    "@umm/context_management": "umm/context_management#^1.0.0",
+    "@umm/scripts": "umm/scripts#^1.0.0",
+    "@umm/unirx": "umm/unirx#^2.0.0",
+    "@umm/unirx_observableunitywebrequest": "umm/unirx_observableunitywebrequest#^1.0.0"
   },
   "devDependencies": {}
 }
