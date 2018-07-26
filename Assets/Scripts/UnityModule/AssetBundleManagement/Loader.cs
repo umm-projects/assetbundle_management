@@ -184,7 +184,7 @@ namespace UnityModule.AssetBundleManagement {
                                             return Observable.Return(LoadedAssetBundleMap[assetBundleName]);
                                         }
                                         return ObservableUnityWebRequest
-                                            .GetAssetBundle(URLResolverNormal.Resolve(assetBundleName), SingleManifest.GetAssetBundleHash(assetBundleName), 0, null, GetProgress(assetBundleName))
+                                            .GetAssetBundle(URLResolverNormal.Resolve(assetBundleName).ToString(), SingleManifest.GetAssetBundleHash(assetBundleName), 0, null, GetProgress(assetBundleName))
                                             // 読み込み完了時に読み込み済マップに入れておく
                                             //   AssetBundle を開きっぱなしにしておくコストは殆ど無いとのことなので、Unload は原則行わない
                                             //   See also: http://tsubakit1.hateblo.jp/entry/2016/08/23/233604 の「SceneをAssetBundleに含める方法」セクションの最後
@@ -242,7 +242,7 @@ namespace UnityModule.AssetBundleManagement {
                 return Observable.Return(LoadedAssetBundleMap[assetBundleName]);
             }
             return ObservableUnityWebRequest
-                .GetAssetBundle(URLResolverNormal.Resolve(assetBundleName), 0)
+                .GetAssetBundle(URLResolverNormal.Resolve(assetBundleName).ToString(), 0)
                 .Do(assetBundle => LoadedAssetBundleMap[assetBundleName] = assetBundle)
                 .Timeout(TimeSpan.FromSeconds(TimeoutSeconds));
         }
@@ -289,7 +289,7 @@ namespace UnityModule.AssetBundleManagement {
             Func<IObservable<AssetBundle>> createStream = () => AssetBundle.LoadFromFileAsync(CreateLocalSingleManifestPath()).AsAsyncOperationObservable().Select(assetBundleCreateRequest => assetBundleCreateRequest.assetBundle);
             if (!HasSingleManifest()) {
                 return ObservableUnityWebRequest
-                    .GetData(urlResolverSingleManifest.Resolve())
+                    .GetData(urlResolverSingleManifest.Resolve().ToString())
                     .Timeout(TimeSpan.FromSeconds(TimeoutSeconds))
                     .Retry(RetryCount)
                     .Do(SaveSingleManifest)

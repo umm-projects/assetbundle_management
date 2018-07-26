@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
+using UnityEditor;
 using UnityEngine;
 using UnityModule.ContextManagement;
+
 // ReSharper disable ConvertToAutoProperty
 // ReSharper disable UseStringInterpolation
 // ReSharper disable AutoPropertyCanBeMadeGetOnly.Local
@@ -14,9 +16,9 @@ namespace UnityModule.AssetBundleManagement {
 
     public interface IURLResolver {
 
-        string Resolve();
+        Uri Resolve();
 
-        string Resolve(string assetBundleName);
+        Uri Resolve(string assetBundleName);
 
         AssetBundleManifest GetSingleManifest();
 
@@ -37,9 +39,9 @@ namespace UnityModule.AssetBundleManagement {
         };
 
 #if UNITY_EDITOR
-        private static readonly Dictionary<UnityEditor.BuildTarget, string> PlatformNameMapForEditor = new Dictionary<UnityEditor.BuildTarget, string>() {
-            { UnityEditor.BuildTarget.iOS    , "iOS" },
-            { UnityEditor.BuildTarget.Android, "Android" },
+        private static readonly Dictionary<BuildTarget, string> PlatformNameMapForEditor = new Dictionary<BuildTarget, string>() {
+            { BuildTarget.iOS    , "iOS" },
+            { BuildTarget.Android, "Android" },
         };
 #endif
 
@@ -89,16 +91,16 @@ namespace UnityModule.AssetBundleManagement {
 
         private AssetBundleManifest SingleManifest { get; set; }
 
-        public string Resolve() {
+        public Uri Resolve() {
             return Resolve(null);
         }
 
-        public string Resolve(string assetBundleName) {
+        public Uri Resolve(string assetBundleName) {
             return new UriBuilder {
                 Scheme = ProtocolResolver(),
                 Host = HostnameResolver(),
                 Path = PathResolver(assetBundleName),
-            }.ToString();
+            }.Uri;
         }
 
         public AssetBundleManifest GetSingleManifest() {
@@ -124,8 +126,8 @@ namespace UnityModule.AssetBundleManagement {
         protected static string GetPlatformPathName() {
 #if UNITY_EDITOR
             // PostprocessBuildAssetBundle などで iOS/Android 向けの URL を作成するなどの処理が必要になるため、現在向いている Platform を正として処理する
-            if (PlatformNameMapForEditor.ContainsKey(UnityEditor.EditorUserBuildSettings.activeBuildTarget)) {
-                return PlatformNameMapForEditor[UnityEditor.EditorUserBuildSettings.activeBuildTarget];
+            if (PlatformNameMapForEditor.ContainsKey(EditorUserBuildSettings.activeBuildTarget)) {
+                return PlatformNameMapForEditor[EditorUserBuildSettings.activeBuildTarget];
             }
 #endif
             return PlatformNameMap[Application.platform];
@@ -159,18 +161,21 @@ namespace UnityModule.AssetBundleManagement {
 
         private string BucketName { get; set; }
 
-        public AmazonS3URLResolver(string region, string bucketName) {
+        private bool UseS3Protocol { get; set; }
+
+        public AmazonS3URLResolver(string region, string bucketName, bool useS3Protocol = false) {
             Region = region;
             BucketName = bucketName;
-            ProtocolResolver = () => "https";
-            HostnameResolver = () => string.Format("s3-{0}.amazonaws.com", Region);
+            UseS3Protocol = useS3Protocol;
+            ProtocolResolver = () => UseS3Protocol ? "s3" : "https";
+            HostnameResolver = () => UseS3Protocol ? BucketName : string.Format("s3-{0}.amazonaws.com", Region);
             PathResolver = DefaultPathResolver;
             AppendPathPrefix = true;
         }
 
         protected override string CreateSingleManifestPath() {
             return Path.Combine(
-                BucketName,
+                UseS3Protocol ? string.Empty : BucketName,
                 AppendPathPrefix ? DefaultPathPrefix : string.Empty,
                 ContextManager.CurrentProject.Name,
                 GetPlatformPathName(),
@@ -182,7 +187,7 @@ namespace UnityModule.AssetBundleManagement {
         protected override string CreatePath(string assetBundleName) {
             string hashString = GetSingleManifest().GetAssetBundleHash(assetBundleName).ToString();
             return Path.Combine(
-                BucketName,
+                UseS3Protocol ? string.Empty : BucketName,
                 AppendPathPrefix ? DefaultPathPrefix : string.Empty,
                 ContextManager.CurrentProject.Name,
                 GetPlatformPathName(),
@@ -225,14 +230,6 @@ namespace UnityModule.AssetBundleManagement {
                 hashString.Substring(0, HashSubstringDigit),
                 hashString
             );
-        }
-
-    }
-
-    internal static class Path {
-
-        public static string Combine(params string[] arguments) {
-            return arguments.Aggregate(string.Empty, System.IO.Path.Combine);
         }
 
     }
