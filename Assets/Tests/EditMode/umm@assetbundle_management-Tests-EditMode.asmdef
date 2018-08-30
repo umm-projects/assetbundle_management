@@ -1,0 +1,15 @@
+{
+    "name": "umm@assetbundle_management-Tests-EditMode",
+    "references": [
+        "umm@assetbundle_management",
+        "umm@context_management"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
+}

@@ -25,16 +25,16 @@ namespace UnityModule.AssetBundleManagement {
 
     public class PathFormatNameResolver : INameResolver {
 
-        private static readonly Dictionary<Type, string> PATH_FORMAT_MAP = new Dictionary<Type, string>();
+        private static readonly Dictionary<Type, string> PathFormatMap = new Dictionary<Type, string>();
 
-        private static readonly Dictionary<Type, string> DIRECTORY_NAME_MAP = new Dictionary<Type, string>() {
+        private static readonly Dictionary<Type, string> DirectoryNameMap = new Dictionary<Type, string>() {
             { typeof(SceneObject)     , "Scenes/" },
             { typeof(Texture)         , "Images/Sprites/" },
             { typeof(AudioClip)       , "Sounds/" },
             { typeof(ScriptableObject), "Entities/" }, // CAFU 由来
         };
 
-        private static readonly Dictionary<Type, string> EXTENSION_MAP = new Dictionary<Type, string>() {
+        private static readonly Dictionary<Type, string> ExtensionMap = new Dictionary<Type, string>() {
             { typeof(SceneObject)     , ".unity" },
             { typeof(Texture)         , ".png" },
             { typeof(AudioClip)       , ".mp3" },
@@ -54,11 +54,11 @@ namespace UnityModule.AssetBundleManagement {
 
         public string Resolve<T>(string name, bool includeAssetBundleExtension = true) where T : Object {
             return string.Format(
-                PATH_FORMAT_MAP.ContainsKey(typeof(T)) ? PATH_FORMAT_MAP[typeof(T)] : DefaultPathFormat,
-                DIRECTORY_NAME_MAP.ContainsKey(typeof(T)) ? DIRECTORY_NAME_MAP[typeof(T)].ToLower() : string.Empty,
+                PathFormatMap.ContainsKey(typeof(T)) ? PathFormatMap[typeof(T)] : DefaultPathFormat,
+                DirectoryNameMap.ContainsKey(typeof(T)) ? DirectoryNameMap[typeof(T)].ToLower() : string.Empty,
                 name.ToLower(),
-                EXTENSION_MAP.ContainsKey(typeof(T)) ? EXTENSION_MAP[typeof(T)].ToLower() : string.Empty,
-                includeAssetBundleExtension ? Constants.ASSET_BUNDLE_EXTENSION : string.Empty
+                ExtensionMap.ContainsKey(typeof(T)) ? ExtensionMap[typeof(T)].ToLower() : string.Empty,
+                includeAssetBundleExtension ? Constants.AssetBundleExtension : string.Empty
             );
         }
 
@@ -69,15 +69,15 @@ namespace UnityModule.AssetBundleManagement {
         /// <typeparam name="T">対象の型</typeparam>
         /// <remarks>0: ベースディレクトリ名, 1: アセット名, 2: アセット拡張子, 3: AssetBundle 拡張子</remarks>
         public static void SetPathFormat<T>(string pathFormat) {
-            PATH_FORMAT_MAP[typeof(T)] = pathFormat;
+            PathFormatMap[typeof(T)] = pathFormat;
         }
 
         public static void SetDirectoryName<T>(string directoryName) {
-            DIRECTORY_NAME_MAP[typeof(T)] = directoryName;
+            DirectoryNameMap[typeof(T)] = directoryName;
         }
 
         public static void SetExtension<T>(string extension) {
-            EXTENSION_MAP[typeof(T)] = extension;
+            ExtensionMap[typeof(T)] = extension;
         }
 
         // ReSharper disable once ParameterHidesMember

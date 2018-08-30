@@ -11,7 +11,7 @@ namespace UnityModule.AssetBundleManagement {
     public class DefaultAssetBundleNameResolver : IAssetBundleNameResolver {
 
         public string Resolve(string guid) {
-            return string.Format("{0}{1}", AssetDatabase.GUIDToAssetPath(guid).ToLower(), Constants.ASSET_BUNDLE_EXTENSION);
+            return string.Format("{0}{1}", AssetDatabase.GUIDToAssetPath(guid).ToLower(), Constants.AssetBundleExtension);
         }
 
     }
