@@ -12,147 +12,117 @@ using UnityModule.ContextManagement;
 // ReSharper disable VirtualMemberNeverOverridden.Global
 // ReSharper disable UnusedMember.Global
 
-namespace UnityModule.AssetBundleManagement {
-
-    public interface IURLResolver {
-
-        Uri Resolve();
+namespace UnityModule.AssetBundleManagement
+{
+    public interface IURLResolver
+    {
+        Uri ResolveSingleManifest();
 
         Uri Resolve(string assetBundleName);
 
         AssetBundleManifest GetSingleManifest();
 
         void SetSingleManifest(AssetBundleManifest assetBundleManifest);
-
     }
 
-    public abstract class URLResolverBase : IURLResolver {
-
+    public abstract class URLResolverBase : IURLResolver
+    {
         protected const string DefaultPathPrefix = "AssetBundles";
 
-        private static readonly Dictionary<RuntimePlatform, string> PlatformNameMap = new Dictionary<RuntimePlatform, string>() {
-            { RuntimePlatform.IPhonePlayer , "iOS" },
-            { RuntimePlatform.Android      , "Android" },
-            { RuntimePlatform.LinuxEditor  , "Standalone" },
-            { RuntimePlatform.OSXEditor    , "Standalone" },
-            { RuntimePlatform.WindowsEditor, "Standalone" },
-        };
+        private static readonly Dictionary<RuntimePlatform, string> PlatformNameMap =
+            new Dictionary<RuntimePlatform, string>()
+            {
+                {RuntimePlatform.IPhonePlayer, "iOS"},
+                {RuntimePlatform.Android, "Android"},
+                {RuntimePlatform.LinuxEditor, "Standalone"},
+                {RuntimePlatform.OSXEditor, "Standalone"},
+                {RuntimePlatform.WindowsEditor, "Standalone"},
+            };
 
 #if UNITY_EDITOR
-        private static readonly Dictionary<BuildTarget, string> PlatformNameMapForEditor = new Dictionary<BuildTarget, string>() {
-            { BuildTarget.iOS    , "iOS" },
-            { BuildTarget.Android, "Android" },
-        };
+        private static readonly Dictionary<BuildTarget, string> PlatformNameMapForEditor =
+            new Dictionary<BuildTarget, string>()
+            {
+                {BuildTarget.iOS, "iOS"},
+                {BuildTarget.Android, "Android"},
+            };
 #endif
 
-        private Func<string> protocolResolver;
+        protected virtual Func<string> GenerateProtocol { get; set; } = () => "";
 
-        protected virtual Func<string> ProtocolResolver {
-            get {
-                return protocolResolver ?? (protocolResolver = () => "");
-            }
-            set {
-                protocolResolver = value;
-            }
-        }
+        protected virtual Func<string> GenerateHostname { get; set; } = () => "";
 
-        private Func<string> hostnameResolver;
+        protected virtual Func<string, string> GenerateAssetBundlePath { get; set; } = (assetBundleName) => "";
 
-        protected virtual Func<string> HostnameResolver {
-            get {
-                return hostnameResolver ?? (hostnameResolver = () => "");
-            }
-            set {
-                hostnameResolver = value;
-            }
-        }
+        protected virtual Func<string> GenerateSingleManifestPath { get; set; } = () => "";
 
-        private Func<string, string> pathResolver;
-
-        protected virtual Func<string, string> PathResolver {
-            get {
-                return pathResolver ?? (pathResolver = (assetBundleName) => "");
-            }
-            set {
-                pathResolver = value;
-            }
-        }
-
-        private bool appendPathPrefix = true;
-
-        protected virtual bool AppendPathPrefix {
-            get {
-                return appendPathPrefix;
-            }
-            set {
-                appendPathPrefix = value;
-            }
-        }
+        protected virtual bool AppendPathPrefix { get; set; } = true;
 
         private AssetBundleManifest SingleManifest { get; set; }
 
-        public Uri Resolve() {
-            return Resolve(null);
-        }
-
-        public Uri Resolve(string assetBundleName) {
-            return new UriBuilder {
-                Scheme = ProtocolResolver(),
-                Host = HostnameResolver(),
-                Path = PathResolver(assetBundleName),
+        public Uri ResolveSingleManifest()
+        {
+            return new UriBuilder
+            {
+                Scheme = GenerateProtocol(),
+                Host = GenerateHostname(),
+                Path = GenerateSingleManifestPath(),
             }.Uri;
         }
 
-        public AssetBundleManifest GetSingleManifest() {
+        public Uri Resolve(string assetBundleName)
+        {
+            return new UriBuilder
+            {
+                Scheme = GenerateProtocol(),
+                Host = GenerateHostname(),
+                Path = GenerateAssetBundlePath(assetBundleName),
+            }.Uri;
+        }
+
+        public AssetBundleManifest GetSingleManifest()
+        {
             return SingleManifest;
         }
 
-        public void SetSingleManifest(AssetBundleManifest assetBundleManifest) {
+        public void SetSingleManifest(AssetBundleManifest assetBundleManifest)
+        {
             SingleManifest = assetBundleManifest;
         }
 
-        protected virtual string DefaultPathResolver(string assetBundleName) {
-            return string.IsNullOrEmpty(assetBundleName) ? CreateSingleManifestPath() : CreatePath(assetBundleName);
+        protected virtual string PrependGeneralPathElements(string path)
+        {
+            return Path.Combine(AppendPathPrefix ? DefaultPathPrefix : string.Empty, GetPlatformPathName(), path);
         }
 
-        protected virtual string CreateSingleManifestPath() {
-            return Path.Combine(AppendPathPrefix ? DefaultPathPrefix : string.Empty, GetPlatformPathName(), GetPlatformPathName());
-        }
-
-        protected virtual string CreatePath(string assetBundleName) {
-            return Path.Combine(AppendPathPrefix ? DefaultPathPrefix : string.Empty, GetPlatformPathName(), assetBundleName);
-        }
-
-        protected static string GetPlatformPathName() {
+        protected static string GetPlatformPathName()
+        {
 #if UNITY_EDITOR
             // PostprocessBuildAssetBundle などで iOS/Android 向けの URL を作成するなどの処理が必要になるため、現在向いている Platform を正として処理する
-            if (PlatformNameMapForEditor.ContainsKey(EditorUserBuildSettings.activeBuildTarget)) {
+            if (PlatformNameMapForEditor.ContainsKey(EditorUserBuildSettings.activeBuildTarget))
+            {
                 return PlatformNameMapForEditor[EditorUserBuildSettings.activeBuildTarget];
             }
 #endif
             return PlatformNameMap[Application.platform];
         }
-
     }
 
-    public sealed class EditorURLResolver : URLResolverBase {
-
-        public EditorURLResolver() {
+    public sealed class EditorURLResolver : URLResolverBase
+    {
+        public EditorURLResolver()
+        {
             // file プロトコルの利用は推奨されていないが、エディタ実行という前提と、インタフェース統一のために妥協している。
             //   本来は AssetBundle.LoadFromFile() の利用が望ましいもよう。
             //   See also: https://unity3d.com/jp/learn/tutorials/topics/best-practices/assetbundle-fundamentals
-            ProtocolResolver = () => "file";
-            PathResolver = DefaultPathResolver;
+            GenerateProtocol = () => "file";
+            GenerateAssetBundlePath = (assetBundleName) => Path.Combine(Application.dataPath, PrependGeneralPathElements(assetBundleName));
+            GenerateSingleManifestPath = () => Path.Combine(Application.dataPath, PrependGeneralPathElements(GetPlatformPathName()));
         }
-
-        protected override string DefaultPathResolver(string assetBundleName) {
-            return Path.Combine(Application.dataPath, base.DefaultPathResolver(assetBundleName));
-        }
-
     }
 
-    public sealed class AmazonS3URLResolver : URLResolverBase {
-
+    public sealed class AmazonS3URLResolver : URLResolverBase
+    {
         private const int HashSubstringDigit = 2;
 
         private const string SingleManifestDirectoryName = "SingleManifests";
@@ -163,75 +133,72 @@ namespace UnityModule.AssetBundleManagement {
 
         private bool UseS3Protocol { get; set; }
 
-        public AmazonS3URLResolver(string region, string bucketName, bool useS3Protocol = false) {
+        public AmazonS3URLResolver(string region, string bucketName, bool useS3Protocol = false)
+        {
             Region = region;
             BucketName = bucketName;
             UseS3Protocol = useS3Protocol;
-            ProtocolResolver = () => UseS3Protocol ? "s3" : "https";
-            HostnameResolver = () => UseS3Protocol ? BucketName : string.Format("s3-{0}.amazonaws.com", Region);
-            PathResolver = DefaultPathResolver;
+            GenerateProtocol = () => UseS3Protocol ? "s3" : "https";
+            GenerateHostname = () => UseS3Protocol ? BucketName : string.Format("s3-{0}.amazonaws.com", Region);
+            GenerateAssetBundlePath =
+                (assetBundleName) =>
+                {
+                    var hashString = GetSingleManifest().GetAssetBundleHash(assetBundleName).ToString();
+                    return Path.Combine(
+                        UseS3Protocol ? string.Empty : BucketName,
+                        AppendPathPrefix ? DefaultPathPrefix : string.Empty,
+                        ContextManager.CurrentProject.Name,
+                        GetPlatformPathName(),
+                        hashString.Substring(0, HashSubstringDigit),
+                        hashString
+                    );
+                };
+            GenerateSingleManifestPath =
+                () =>
+                    Path.Combine(
+                        UseS3Protocol ? string.Empty : BucketName,
+                        AppendPathPrefix ? DefaultPathPrefix : string.Empty,
+                        ContextManager.CurrentProject.Name,
+                        GetPlatformPathName(),
+                        SingleManifestDirectoryName,
+                        ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
+                    );
             AppendPathPrefix = true;
         }
-
-        protected override string CreateSingleManifestPath() {
-            return Path.Combine(
-                UseS3Protocol ? string.Empty : BucketName,
-                AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                ContextManager.CurrentProject.Name,
-                GetPlatformPathName(),
-                SingleManifestDirectoryName,
-                ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
-            );
-        }
-
-        protected override string CreatePath(string assetBundleName) {
-            string hashString = GetSingleManifest().GetAssetBundleHash(assetBundleName).ToString();
-            return Path.Combine(
-                UseS3Protocol ? string.Empty : BucketName,
-                AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                ContextManager.CurrentProject.Name,
-                GetPlatformPathName(),
-                hashString.Substring(0, HashSubstringDigit),
-                hashString
-            );
-        }
-
     }
 
-    public sealed class AmazonCloudFrontURLResolver : URLResolverBase {
-
+    public sealed class AmazonCloudFrontURLResolver : URLResolverBase
+    {
         private const int HashSubstringDigit = 2;
 
         private const string SingleManifestDirectoryName = "SingleManifests";
 
-        public AmazonCloudFrontURLResolver(string domainNamePrefix) {
-            ProtocolResolver = () => "https";
-            HostnameResolver = () => string.Format("{0}.cloudfront.net", domainNamePrefix);
-            PathResolver = DefaultPathResolver;
+        public AmazonCloudFrontURLResolver(string domainNamePrefix)
+        {
+            GenerateProtocol = () => "https";
+            GenerateHostname = () => string.Format("{0}.cloudfront.net", domainNamePrefix);
+            GenerateAssetBundlePath =
+                (assetBundleName) =>
+                {
+                    var hashString = GetSingleManifest().GetAssetBundleHash(assetBundleName).ToString();
+                    return Path.Combine(
+                        AppendPathPrefix ? DefaultPathPrefix : string.Empty,
+                        ContextManager.CurrentProject.Name,
+                        GetPlatformPathName(),
+                        hashString.Substring(0, HashSubstringDigit),
+                        hashString
+                    );
+                };
+            GenerateSingleManifestPath =
+                () =>
+                    Path.Combine(
+                        AppendPathPrefix ? DefaultPathPrefix : string.Empty,
+                        ContextManager.CurrentProject.Name,
+                        GetPlatformPathName(),
+                        SingleManifestDirectoryName,
+                        ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
+                    );
             AppendPathPrefix = true;
         }
-
-        protected override string CreateSingleManifestPath() {
-            return Path.Combine(
-                AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                ContextManager.CurrentProject.Name,
-                GetPlatformPathName(),
-                SingleManifestDirectoryName,
-                ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
-            );
-        }
-
-        protected override string CreatePath(string assetBundleName) {
-            string hashString = GetSingleManifest().GetAssetBundleHash(assetBundleName).ToString();
-            return Path.Combine(
-                AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                ContextManager.CurrentProject.Name,
-                GetPlatformPathName(),
-                hashString.Substring(0, HashSubstringDigit),
-                hashString
-            );
-        }
-
     }
-
 }
