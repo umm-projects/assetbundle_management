@@ -289,7 +289,7 @@ namespace UnityModule.AssetBundleManagement {
             Func<IObservable<AssetBundle>> createStream = () => AssetBundle.LoadFromFileAsync(CreateLocalSingleManifestPath()).AsAsyncOperationObservable().Select(assetBundleCreateRequest => assetBundleCreateRequest.assetBundle);
             if (!HasSingleManifest()) {
                 return ObservableUnityWebRequest
-                    .GetData(urlResolverSingleManifest.Resolve().ToString())
+                    .GetData(urlResolverSingleManifest.ResolveSingleManifest().ToString())
                     .Timeout(TimeSpan.FromSeconds(TimeoutSeconds))
                     .Retry(RetryCount)
                     .Do(SaveSingleManifest)
