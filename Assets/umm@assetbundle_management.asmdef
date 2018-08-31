@@ -2,6 +2,7 @@
   "name": "umm@assetbundle_management",
   "references": [
     "umm@context_management",
+    "umm@setting_core",
     "umm@unirx",
     "umm@unirx_observableunitywebrequest"
   ],
