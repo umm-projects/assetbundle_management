@@ -27,6 +27,7 @@
   "dependencies": {
     "@umm/context_management": "umm/context_management#^1.0.0",
     "@umm/scripts": "umm/scripts#^1.0.0",
+    "@umm/setting_core": "umm/setting_core#^2.0.0",
     "@umm/unirx": "umm/unirx#^2.0.0",
     "@umm/unirx_observableunitywebrequest": "umm/unirx_observableunitywebrequest#^1.0.0"
   },
