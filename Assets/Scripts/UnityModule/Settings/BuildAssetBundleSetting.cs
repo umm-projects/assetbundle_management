@@ -5,10 +5,10 @@ namespace UnityModule.Settings
 {
     public class BuildAssetBundleSetting : Setting<BuildAssetBundleSetting>, IEnvironmentSetting
     {
-        private const string EnvironmentVariableKeyForceUploadAssetBundle = "FORCE_UPLOAD_ASSETBUNDLE";
+        private const string EnvironmentVariableKeyBuildAssetBundleForceUpload = "BUILD_ASSETBUNDLE_FORCE_UPLOAD";
 
-        [SerializeField] private bool forceUploadAssetBundle = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(EnvironmentVariableKeyForceUploadAssetBundle));
+        [SerializeField] private bool forceUpload = Environment.GetEnvironmentVariable(EnvironmentVariableKeyBuildAssetBundleForceUpload) == "true";
 
-        public bool ForceUploadAssetBundle => forceUploadAssetBundle;
+        public bool ForceUpload => forceUpload;
     }
 }
