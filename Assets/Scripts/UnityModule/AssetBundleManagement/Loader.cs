@@ -165,38 +165,10 @@ namespace UnityModule.AssetBundleManagement {
                 );
         }
 
-        public IObservable<Unit> DownloadAllAsObservable() {
-            return LoadSingleManifestAsObservable()
-                .SelectMany(
-                    _ => SingleManifest
-                        // 全ての AssetBundle 名を取得
-                        .GetAllAssetBundles()
-                        .Select(
-                            assetBundleName => Observable
-                                // 並列処理待ち
-                                .FromCoroutine(WaitParallelDownload)
-                                // 並列カウントをインクリメント
-                                .Do(__ => ParallelDownloadCount.Value++)
-                                // UnityWebRequest に変換
-                                .SelectMany(
-                                    __ => {
-                                        if (LoadedAssetBundleMap.ContainsKey(assetBundleName)) {
-                                            return Observable.Return(LoadedAssetBundleMap[assetBundleName]);
-                                        }
-                                        return ObservableUnityWebRequest
-                                            .GetAssetBundle(URLResolverNormal.Resolve(assetBundleName).ToString(), SingleManifest.GetAssetBundleHash(assetBundleName), 0, null, GetProgress(assetBundleName))
-                                            // 読み込み完了時に読み込み済マップに入れておく
-                                            //   AssetBundle を開きっぱなしにしておくコストは殆ど無いとのことなので、Unload は原則行わない
-                                            //   See also: http://tsubakit1.hateblo.jp/entry/2016/08/23/233604 の「SceneをAssetBundleに含める方法」セクションの最後
-                                            .Do(assetBundle => LoadedAssetBundleMap[assetBundleName] = assetBundle)
-                                            .Timeout(TimeSpan.FromSeconds(TimeoutSeconds));
-                                    })
-                                // OnError にせよ OnCompleted にせよ「完了」したら並列ダウンロード数をデクリメント
-                                .Finally(() => ParallelDownloadCount.Value--)
-                        )
-                        .WhenAll()
-                )
-                .AsUnitObservable();
+        public IObservable<Unit> DownloadAllAsObservable()
+        {
+            // ダウンロード処理は kidsstar/pretendland_common_assetbundle に委譲
+            return LoadSingleManifestAsObservable().AsUnitObservable();
         }
 
         public IObservable<T> LoadAssetAsObservable<T>(string name) where T : Object {
