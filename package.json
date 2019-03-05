@@ -1,6 +1,6 @@
 {
   "name": "@umm/assetbundle_management",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "Manage AssetBundle handling",
   "homepage": "https://github.com/umm/assetbundle_management",
   "bugs": {
