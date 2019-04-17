@@ -42,6 +42,8 @@ namespace UnityModule.AssetBundleManagement {
 
         private const string LocalSingleManifestDirectory = "SingleManifests";
 
+        private const string RemoteSettingKeyFormat = "SingleManifestVersion{0}{1}";
+
         private static Dictionary<string, Loader> instanceMap;
 
         private static Dictionary<string, Loader> InstanceMap {
@@ -238,8 +240,16 @@ namespace UnityModule.AssetBundleManagement {
                 LocalAssetBundleDirectory,
                 ContextManager.CurrentProject.Name,
                 LocalSingleManifestDirectory,
-                ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
+                ResolveSingleManifestVersion().ToString()
             );
+        }
+
+        private static int ResolveSingleManifestVersion()
+        {
+            var version = ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion;
+            var projectName = ContextManager.CurrentProject.SceneNamePrefix.TrimEnd('_');
+            var delimiter = string.IsNullOrEmpty(projectName) ? string.Empty : "-";
+            return Math.Max(version, RemoteSettings.GetInt(string.Format(RemoteSettingKeyFormat, delimiter, projectName), version));
         }
 
         private static bool HasSingleManifest() {

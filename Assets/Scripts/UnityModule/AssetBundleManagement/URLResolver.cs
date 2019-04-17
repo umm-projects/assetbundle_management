@@ -27,6 +27,8 @@ namespace UnityModule.AssetBundleManagement
 
     public abstract class URLResolverBase : IURLResolver
     {
+        private const string RemoteSettingKeyFormat = "SingleManifestVersion{0}{1}";
+
         protected const string DefaultPathPrefix = "AssetBundles";
 
         private static readonly Dictionary<RuntimePlatform, string> PlatformNameMap =
@@ -106,6 +108,14 @@ namespace UnityModule.AssetBundleManagement
 #endif
             return PlatformNameMap[Application.platform];
         }
+
+        protected static int ResolveSingleManifestVersion()
+        {
+            var version = ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion;
+            var projectName = ContextManager.CurrentProject.SceneNamePrefix.TrimEnd('_');
+            var delimiter = string.IsNullOrEmpty(projectName) ? string.Empty : "-";
+            return Math.Max(version, RemoteSettings.GetInt(string.Format(RemoteSettingKeyFormat, delimiter, projectName), version));
+        }
     }
 
     public sealed class EditorURLResolver : URLResolverBase
@@ -161,7 +171,7 @@ namespace UnityModule.AssetBundleManagement
                         ContextManager.CurrentProject.Name,
                         GetPlatformPathName(),
                         SingleManifestDirectoryName,
-                        ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
+                        ResolveSingleManifestVersion().ToString()
                     );
             AppendPathPrefix = true;
         }
@@ -196,7 +206,7 @@ namespace UnityModule.AssetBundleManagement
                         ContextManager.CurrentProject.Name,
                         GetPlatformPathName(),
                         SingleManifestDirectoryName,
-                        ContextManager.CurrentProject.As<IDownloadableProjectContext>().AssetBundleSingleManifestVersion.ToString()
+                        ResolveSingleManifestVersion().ToString()
                     );
             AppendPathPrefix = true;
         }
