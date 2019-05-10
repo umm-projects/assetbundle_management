@@ -199,7 +199,7 @@ namespace UnityModule.AssetBundleManagement {
                 );
         }
 
-        private IObservable<AssetBundle> LoadWithDependenciesAsObservable(string assetBundleName) {
+        public IObservable<AssetBundle> LoadWithDependenciesAsObservable(string assetBundleName) {
             if (!SingleManifest.GetDirectDependencies(assetBundleName).Any()) {
                 return LoadAsObservable(assetBundleName);
             }
@@ -211,7 +211,7 @@ namespace UnityModule.AssetBundleManagement {
                 .SelectMany(_ => LoadAsObservable(assetBundleName));
         }
 
-        private IObservable<AssetBundle> LoadAsObservable(string assetBundleName) {
+        public IObservable<AssetBundle> LoadAsObservable(string assetBundleName) {
             if (LoadedAssetBundleMap.ContainsKey(assetBundleName)) {
                 return Observable.Return(LoadedAssetBundleMap[assetBundleName]);
             }
