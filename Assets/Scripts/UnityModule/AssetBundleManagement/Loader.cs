@@ -216,9 +216,14 @@ namespace UnityModule.AssetBundleManagement {
                 return Observable.Return(LoadedAssetBundleMap[assetBundleName]);
             }
             return ObservableUnityWebRequest
-                .GetAssetBundle(URLResolverNormal.Resolve(assetBundleName).ToString(), SingleManifest.GetAssetBundleHash(assetBundleName), 0)
+                .GetAssetBundle(ResolveAssetBundleURL(assetBundleName), SingleManifest.GetAssetBundleHash(assetBundleName), 0)
                 .Do(assetBundle => LoadedAssetBundleMap[assetBundleName] = assetBundle)
                 .Timeout(TimeSpan.FromSeconds(TimeoutSeconds));
+        }
+
+        public string ResolveAssetBundleURL(string assetBundleName)
+        {
+            return URLResolverNormal.Resolve(assetBundleName).ToString();
         }
 
         private static T LoadAssetFromAssetBundle<T>(AssetBundle assetBundle, string name) where T : Object {
