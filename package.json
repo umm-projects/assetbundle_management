@@ -11,7 +11,7 @@
     "umm:generate_assembly_definition": "umm-generate_assembly_definition",
     "umm:module:install": "umm-module-install",
     "umm:module:uninstall": "umm-module-uninstall",
-    "postinstall": "npm run --silent umm:module:install",
+    "postinstall": "npm run --silent umm:module:install && ./scripts/first-aid-for-upm.sh",
     "postuninstall": "npm run --silent umm:module:uninstall"
   },
   "author": "Tetsuya Mori",
@@ -28,7 +28,6 @@
     "@umm/context_management": "umm/context_management#^1.0.0",
     "@umm/scripts": "umm/scripts#^1.0.0",
     "@umm/setting_core": "umm/setting_core#^2.0.0",
-    "@umm/unirx": "umm/unirx#^2.0.0",
     "@umm/unirx_observableunitywebrequest": "umm/unirx_observableunitywebrequest#^1.0.0"
   },
   "devDependencies": {}
