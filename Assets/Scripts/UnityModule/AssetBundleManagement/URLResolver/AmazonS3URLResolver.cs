@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using UnityModule.ContextManagement;
 
 namespace UnityModule.AssetBundleManagement
 {
@@ -25,36 +24,36 @@ namespace UnityModule.AssetBundleManagement
             GenerateProtocol = () => UseS3Protocol ? "s3" : "https";
             GenerateHostname = () => UseS3Protocol ? BucketName : string.Format("s3-{0}.amazonaws.com", Region);
             GenerateAssetBundlePath =
-                (assetBundleName) =>
+                (snakeCaseProjectName, assetBundleName) =>
                 {
                     var hashString = GetSingleManifest().GetAssetBundleHash(assetBundleName).ToString();
                     return Path.Combine(
                         UseS3Protocol ? string.Empty : BucketName,
                         AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                        ContextManager.CurrentProject.Name,
+                        snakeCaseProjectName,
                         GetPlatformPathName(),
                         hashString.Substring(0, HashSubstringDigit),
                         hashString
                     );
                 };
             GenerateSingleManifestPath =
-                () =>
+                (snakeCaseProjectName) =>
                     Path.Combine(
                         UseS3Protocol ? string.Empty : BucketName,
                         AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                        ContextManager.CurrentProject.Name,
+                        snakeCaseProjectName,
                         GetPlatformPathName(),
                         SingleManifestDirectoryName,
                         ResolveSingleManifestVersion().ToString()
                     );
-            GenerateDynamicProjectContextListJson =
-                () =>
+            GenerateProjectPlatformFilePath =
+                (snakeCaseProjectName, fileName) =>
                     Path.Combine(
                         UseS3Protocol ? string.Empty : BucketName,
                         AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                        ContextManager.CurrentProject.Name,
+                        snakeCaseProjectName,
                         GetPlatformPathName(),
-                        DynamicProjectContextListJsonName
+                        fileName
                     );
             AppendPathPrefix = true;
         }

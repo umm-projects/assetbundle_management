@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using UnityModule.ContextManagement;
 
 namespace UnityModule.AssetBundleManagement
 {
@@ -9,40 +8,38 @@ namespace UnityModule.AssetBundleManagement
 
         private const string SingleManifestDirectoryName = "SingleManifests";
 
-        private const string DynamicProjectContextListJsonName = "dynamic_project_context_list.json";
-
         public AmazonCloudFrontURLResolver(string domainNamePrefix)
         {
             GenerateProtocol = () => "https";
             GenerateHostname = () => string.Format("{0}.cloudfront.net", domainNamePrefix);
             GenerateAssetBundlePath =
-                (assetBundleName) =>
+                (snakeCaseProjectName, assetBundleName) =>
                 {
                     var hashString = GetSingleManifest().GetAssetBundleHash(assetBundleName).ToString();
                     return Path.Combine(
                         AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                        ContextManager.CurrentProject.Name,
+                        snakeCaseProjectName,
                         GetPlatformPathName(),
                         hashString.Substring(0, HashSubstringDigit),
                         hashString
                     );
                 };
             GenerateSingleManifestPath =
-                () =>
+                (snakeCaseProjectName) =>
                     Path.Combine(
                         AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                        ContextManager.CurrentProject.Name,
+                        snakeCaseProjectName,
                         GetPlatformPathName(),
                         SingleManifestDirectoryName,
                         ResolveSingleManifestVersion().ToString()
                     );
-            GenerateDynamicProjectContextListJson =
-                () =>
+            GenerateProjectPlatformFilePath =
+                (snakeCaseProjectName, fileName) =>
                     Path.Combine(
                         AppendPathPrefix ? DefaultPathPrefix : string.Empty,
-                        ContextManager.CurrentProject.Name,
+                        snakeCaseProjectName,
                         GetPlatformPathName(),
-                        DynamicProjectContextListJsonName
+                        fileName
                     );
             AppendPathPrefix = true;
         }

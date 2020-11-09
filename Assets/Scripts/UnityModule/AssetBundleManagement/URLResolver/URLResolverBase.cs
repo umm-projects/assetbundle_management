@@ -36,43 +36,44 @@ namespace UnityModule.AssetBundleManagement
 
         protected virtual Func<string> GenerateHostname { get; set; } = () => "";
 
-        protected virtual Func<string, string> GenerateAssetBundlePath { get; set; } = (assetBundleName) => "";
+        protected virtual Func<string, string, string> GenerateAssetBundlePath { get; set; } = (snakeCaseProjectName, assetBundleName) => "";
 
-        protected virtual Func<string> GenerateSingleManifestPath { get; set; } = () => "";
+        protected virtual Func<string, string> GenerateSingleManifestPath { get; set; } = (snakeCaseProjectName) => "";
 
-        protected virtual Func<string> GenerateDynamicProjectContextListJson { get; set; } = () => "";
+        protected virtual Func<string, string, string> GenerateProjectPlatformFilePath { get; set; } = (snakeCaseProjectName, fileName) => "";
 
         protected virtual bool AppendPathPrefix { get; set; } = true;
 
         private AssetBundleManifest SingleManifest { get; set; }
 
-        public Uri ResolveSingleManifest()
+        /// <param name="projectName">e.g. project_name</param>
+        public Uri ResolveSingleManifest(string projectName)
         {
             return new UriBuilder
             {
                 Scheme = GenerateProtocol(),
                 Host = GenerateHostname(),
-                Path = GenerateSingleManifestPath(),
+                Path = GenerateSingleManifestPath(projectName),
             }.Uri;
         }
 
-        public Uri Resolve(string assetBundleName)
+        public Uri Resolve(string projectName, string assetBundleName)
         {
             return new UriBuilder
             {
                 Scheme = GenerateProtocol(),
                 Host = GenerateHostname(),
-                Path = GenerateAssetBundlePath(assetBundleName),
+                Path = GenerateAssetBundlePath(projectName, assetBundleName),
             }.Uri;
         }
 
-        public Uri ResolveDynamicProjectContextListJson()
+        public Uri ResolveProjectPlatformFile(string projectName, string fileName)
         {
             return new UriBuilder
             {
                 Scheme = GenerateProtocol(),
                 Host = GenerateHostname(),
-                Path = GenerateDynamicProjectContextListJson(),
+                Path = GenerateProjectPlatformFilePath(projectName, fileName),
             }.Uri;
         }
 

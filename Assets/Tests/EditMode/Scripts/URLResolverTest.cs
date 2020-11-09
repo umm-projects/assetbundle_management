@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using UnityModule.AssetBundleManagement;
 using UnityModule.ContextManagement;
 
 namespace UnityModule.AssetBundleManagement
@@ -32,7 +31,7 @@ namespace UnityModule.AssetBundleManagement
         {
             {
                 var resolver = new AmazonS3URLResolver("ap-northeast-1", "test-bucket-1");
-                var uri = resolver.Resolve();
+                var uri = resolver.ResolveSingleManifest("TestName");
                 Assert.AreEqual("https", uri.Scheme);
                 Assert.AreEqual("s3-ap-northeast-1.amazonaws.com", uri.Host);
                 Assert.AreEqual("/test-bucket-1/AssetBundles/TestName/Standalone/SingleManifests/1", uri.AbsolutePath);
@@ -40,7 +39,7 @@ namespace UnityModule.AssetBundleManagement
 
             {
                 var resolver = new AmazonS3URLResolver("ap-northeast-1", "test-bucket-2", true);
-                var uri = resolver.Resolve();
+                var uri = resolver.ResolveSingleManifest("TestName");
                 Assert.AreEqual("s3", uri.Scheme);
                 Assert.AreEqual("test-bucket-2", uri.Host);
                 Assert.AreEqual("/AssetBundles/TestName/Standalone/SingleManifests/1", uri.AbsolutePath);
