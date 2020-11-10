@@ -11,7 +11,7 @@
     "umm:generate_assembly_definition": "umm-generate_assembly_definition",
     "umm:module:install": "umm-module-install",
     "umm:module:uninstall": "umm-module-uninstall",
-    "postinstall": "npm run --silent umm:module:install && ./scripts/first-aid-for-upm.sh",
+    "postinstall": "npm run --silent umm:module:install",
     "postuninstall": "npm run --silent umm:module:uninstall"
   },
   "author": "Tetsuya Mori",
