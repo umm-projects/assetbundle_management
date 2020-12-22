@@ -3,7 +3,7 @@
   "references": [
     "umm@context_management",
     "umm@setting_core",
-    "umm@unirx",
+    "UniRx",
     "umm@unirx_observableunitywebrequest"
   ],
   "optionalUnityReferences": [],

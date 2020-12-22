@@ -1,6 +1,6 @@
 {
   "name": "@umm/assetbundle_management",
-  "version": "1.6.7",
+  "version": "2.0.0",
   "description": "Manage AssetBundle handling",
   "homepage": "https://github.com/umm/assetbundle_management",
   "bugs": {
@@ -28,7 +28,6 @@
     "@umm/context_management": "umm/context_management#^1.0.0",
     "@umm/scripts": "umm/scripts#^1.0.0",
     "@umm/setting_core": "umm/setting_core#^2.0.0",
-    "@umm/unirx": "umm/unirx#^2.0.0",
     "@umm/unirx_observableunitywebrequest": "umm/unirx_observableunitywebrequest#^1.0.0"
   },
   "devDependencies": {}

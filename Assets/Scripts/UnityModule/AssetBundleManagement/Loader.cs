@@ -223,7 +223,7 @@ namespace UnityModule.AssetBundleManagement {
 
         public string ResolveAssetBundleURL(string assetBundleName)
         {
-            return URLResolverNormal.Resolve(assetBundleName).ToString();
+            return URLResolverNormal.Resolve(ContextManager.CurrentProject.Name,assetBundleName).ToString();
         }
 
         public Hash128 ResolveAssetBundleHash(string assetBundleName)
@@ -281,7 +281,7 @@ namespace UnityModule.AssetBundleManagement {
             Func<IObservable<AssetBundle>> createStream = () => AssetBundle.LoadFromFileAsync(CreateLocalSingleManifestPath()).AsAsyncOperationObservable().Select(assetBundleCreateRequest => assetBundleCreateRequest.assetBundle);
             if (!HasSingleManifest()) {
                 return ObservableUnityWebRequest
-                    .GetData(urlResolverSingleManifest.ResolveSingleManifest().ToString())
+                    .GetData(urlResolverSingleManifest.ResolveSingleManifest(ContextManager.CurrentProject.Name).ToString())
                     .Timeout(TimeSpan.FromSeconds(TimeoutSeconds))
                     .Retry(RetryCount)
                     .Do(SaveSingleManifest)
