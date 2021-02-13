@@ -5,6 +5,7 @@
         StreamingAssets,
         ObjectStorage,
         ContentsDeliverNetwork,
+        Https,
     }
 
 }
